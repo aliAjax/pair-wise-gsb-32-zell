@@ -6,9 +6,11 @@ class TripWeaverDb extends Dexie {
   trips!: Table<unknown, string>;
   spots!: Table<unknown, string>;
   dayPlans!: Table<unknown, string>;
+  ledgers!: Table<unknown, string>;
   constructor() {
     super('tripweaver');
     this.version(1).stores({ trips: 'id,status,destination', spots: 'id,category', dayPlans: 'id,trip_id,day_index' });
+    this.version(2).stores({ trips: 'id,status,destination', spots: 'id,category', dayPlans: 'id,trip_id,day_index', ledgers: 'trip_id' });
   }
 }
 

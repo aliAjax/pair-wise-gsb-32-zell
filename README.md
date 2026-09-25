@@ -17,7 +17,8 @@ TripWeaver 是一款纯前端旅行规划应用，支持创建旅行、探索景
 - 行程详情：查看每日行程、预算图表和共享时间线。
 - 景点探索：按 SpotCategory 搜索和筛选，收藏并加入行程。
 - 行程编排：SortableJS 拖拽排序，实时影响预算计算。
-- 分享预览：生成可复制的行程文本。
+- 旅行账本：同伴垫付花销（付款人、参与人、类别、金额），按人头均摊算出每人应收应付，给出最少转账建议；不合规条目进待核对区并说明原因；入账后立即扣减行程预算与当天可用预算。
+- 分享预览：生成可复制的行程文本，与详情页展示同一套余额和个人结欠。
 
 ## 技术栈
 
@@ -35,22 +36,32 @@ TripWeaver 是一款纯前端旅行规划应用，支持创建旅行、探索景
 
 ```
 src/
-├── api/
-├── stores/
-├── models/
-├── types/
-├── components/common/
-├── hooks/
-├── pages/
-├── router/
-├── utils/
-├── config/
-└── constants/
+├── api/              # tripApi.ts, spotApi.ts, dayPlanApi.ts, ledgerApi.ts
+├── stores/           # tripStore.ts, spotStore.ts, dayPlanStore.ts, themeStore.ts, ledgerStore.ts
+├── models/           # trip.ts, spot.ts, dayPlan.ts, ledger.ts（独立数据模型类型定义）
+├── types/            # 共享类型补充
+├── components/common/# TripCard, SpotCard, DayTimeline, CategoryFilter, SpotMiniCard, BudgetChart, TripHeader, EmptyState, ExpenseForm, ExpenseList, PendingReview, SettlementPanel
+├── hooks/            # useTripStats.ts, useLocalStorage.ts, useMapSpots.ts, useLedgerSettlement.ts
+├── pages/            # Trips, TripDetail, Spots, Planner, Share, Ledger
+├── router/           # index.ts + guards.ts
+├── utils/            # storage.ts, budgetCalculator.ts, formatters.ts, validators.ts, expenseValidator.ts, settlement.ts
+├── constants/        # spot.ts, trip.ts, ledger.ts, themes.ts, messages.ts, storageVersion.ts
+└── App.vue
+scripts/verify-ledger.ts  # 分摊与结算规则的可执行校验脚本
 ```
 
 ## 数据持久化
 
-本地数据通过 `utils/storage.ts` 统一写入 localStorage，并保留 Dexie 数据库对象用于后续 IndexedDB 扩展。版本键来自 `constants/storageVersion.ts`。
+本地数据通过 `utils/storage.ts` 统一写入 localStorage，并保留 Dexie 数据库对象用于后续 IndexedDB 扩展（已注册 trips / spots / dayPlans / ledgers 四张表）。版本键来自 `constants/storageVersion.ts`。旅行账本（已入账花销、待核对条目、结算结果）每次提交立即写入 localStorage，关闭浏览器再打开仍然存在。
+
+## 旅行账本规则
+
+- 账目模型：`src/models/ledger.ts`（Expense / PendingExpense / Ledger），只定义数据结构。
+- 分摊与结算规则：`src/utils/settlement.ts`——按人头均摊（精确到分，除不尽的尾差由最后一名参与人承担、总额守恒），贪心匹配最大债权人与最大债务人，给出最少笔数的转账建议。
+- 校验规则：`src/utils/expenseValidator.ts`——只允许旅行成员担任付款人或参与人，金额必须为正且最多两位小数；不合规条目不扣预算，原样进入待核对区并逐条说明原因，修正后可重新提交。
+- 预算联动：`src/utils/budgetCalculator.ts`——入账立即扣减行程剩余预算与所选日期的当天可用预算（日均预算 = 总预算 / 旅行天数）。
+- 持久化：`src/api/ledgerApi.ts` + `src/stores/ledgerStore.ts`，独立于页面。
+- 页面：`src/pages/Ledger.vue`（路由 `/trip/:id/ledger`）；`SettlementPanel` 被行程详情页和分享页共用，保证两处展示同一套余额和个人结欠。
 
 ## 环境变量
 
@@ -77,6 +88,15 @@ TripStatus：
 - `src/pages/Trips.vue`
 - `src/utils/formatters.ts`
 - `src/router/guards.ts`
+
+ExpenseCategory（账本花销类别：交通/住宿/餐饮/门票/购物/其他）：
+- `src/constants/ledger.ts`
+- `src/models/ledger.ts`
+- `src/utils/expenseValidator.ts`
+- `src/utils/formatters.ts`
+- `src/stores/ledgerStore.ts`
+- `src/components/common/ExpenseForm.vue`
+- `src/components/common/ExpenseList.vue`
 
 ## License
 

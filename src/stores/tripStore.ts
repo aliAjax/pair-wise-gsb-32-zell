@@ -4,6 +4,7 @@ import type { Trip } from '../models/trip';
 import { tripApi } from '../api/tripApi';
 import { messages } from '../constants/messages';
 import { toast } from '../utils/message';
+import { useLedgerStore } from './ledgerStore';
 
 export const useTripStore = defineStore('trip', {
   state: () => ({ trips: tripApi.list() as Trip[], statusFilter: 'all' as TripStatus | 'all' }),
@@ -11,6 +12,9 @@ export const useTripStore = defineStore('trip', {
     filteredTrips: (state) => state.statusFilter === 'all' ? state.trips : state.trips.filter((trip) => trip.status === state.statusFilter),
   },
   actions: {
+    persist() {
+      tripApi.save(this.trips);
+    },
     createTrip(title = '杭州周末慢旅行') {
       const trip: Trip = {
         id: crypto.randomUUID(),
@@ -25,13 +29,14 @@ export const useTripStore = defineStore('trip', {
         created_at: new Date().toISOString(),
       };
       this.trips.unshift(trip);
-      tripApi.save(this.trips);
+      this.persist();
       toast.ok(messages.tripCreated);
       return trip.id;
     },
     removeTrip(id: string) {
       this.trips = this.trips.filter((trip) => trip.id !== id);
-      tripApi.save(this.trips);
+      this.persist();
+      useLedgerStore().removeByTrip(id);
       toast.ok(messages.tripDeleted);
     },
   },
