@@ -6,9 +6,20 @@ class TripWeaverDb extends Dexie {
   trips!: Table<unknown, string>;
   spots!: Table<unknown, string>;
   dayPlans!: Table<unknown, string>;
+  expenses!: Table<unknown, string>;
+  pendingExpenses!: Table<unknown, string>;
+  settlementPayments!: Table<unknown, string>;
   constructor() {
     super('tripweaver');
     this.version(1).stores({ trips: 'id,status,destination', spots: 'id,category', dayPlans: 'id,trip_id,day_index' });
+    this.version(2).stores({
+      trips: 'id,status,destination',
+      spots: 'id,category',
+      dayPlans: 'id,trip_id,day_index',
+      expenses: 'id,trip_id,spent_date,payer',
+      pendingExpenses: 'id,trip_id',
+      settlementPayments: 'id,trip_id,from,to',
+    });
   }
 }
 
